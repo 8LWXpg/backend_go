@@ -9,7 +9,7 @@
             "server": "localhost",
             "port": 3306,
             "driver": "MySQL",
-            "name": "network db",
+            "name": "network_db",
             "database": "network",
             "username": "root"
         }

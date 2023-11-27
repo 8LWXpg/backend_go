@@ -12,6 +12,3 @@ CREATE TABLE
         ip VARCHAR(255) NOT NULL,
         event TEXT NOT NULL
     );
-
--- @block
-DROP TABLE trap_data

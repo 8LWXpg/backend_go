@@ -26,20 +26,6 @@ func Api_server() {
 	// TODO: set trusted proxies
 	r.SetTrustedProxies([]string{"127.0.0.1"})
 
-	// hello world
-	// example: http://localhost:8080/hello
-	r.GET("/hello", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "hello world"})
-	})
-
-	// post test
-	// example: POST '{"message":"hello"}' http://localhost:8080/test
-	r.POST("/test", func(c *gin.Context) {
-		msg := c.PostForm("message")
-
-		c.JSON(http.StatusOK, gin.H{"message": msg})
-	})
-
 	// query data between start and end time
 	// example: http://localhost:8080/data?start=2020-01-01&end=2020-01-02
 	r.GET("/data", func(c *gin.Context) {
@@ -56,7 +42,7 @@ func Api_server() {
 	})
 
 	// login
-	// example: POST '{"username":"admin","password":"admin"}' http://localhost:8080/login
+	// example: POST body: {"username":"admin","password":"admin"} http://localhost:8080/login
 	r.POST("/login", func(c *gin.Context) {
 		var loginRequest InputField
 
@@ -79,7 +65,7 @@ func Api_server() {
 	})
 
 	// register
-	// example: POST '{"username":"admin","password":"admin"}' http://localhost:8080/register
+	// example: POST body: {"username":"admin","password":"admin"} http://localhost:8080/register
 	r.POST("/register", func(c *gin.Context) {
 		var registerRequest InputField
 
