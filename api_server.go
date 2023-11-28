@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"net/http"
+	"testing"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
@@ -157,14 +158,12 @@ func authenticate(username string, password string) (bool, error) {
 	}
 	defer db.Close()
 
-	hashedPassword := hash(password)
-
 	stmt, err := db.Prepare("SELECT username, password FROM " + AUTH_TABLE + " WHERE username=? AND password=?")
 	if err != nil {
 		return false, err
 	}
 
-	row := stmt.QueryRow(username, hashedPassword)
+	row := stmt.QueryRow(username, hash(password))
 
 	var retrievedUsername, retrievedPassword string
 	err = row.Scan(&retrievedUsername, &retrievedPassword)
@@ -188,14 +187,12 @@ func register(username string, email string, password string) error {
 	}
 	defer db.Close()
 
-	hashedPassword := hash(password)
-
 	stmt, err := db.Prepare("INSERT INTO " + AUTH_TABLE + "(username, email, password) VALUES(?, ?, ?)")
 	if err != nil {
 		return err
 	}
 
-	_, err = stmt.Exec(username, email, hashedPassword)
+	_, err = stmt.Exec(username, email, hash(password))
 	if err != nil {
 		return err
 	}
@@ -207,4 +204,8 @@ func register(username string, email string, password string) error {
 func hash(password string) string {
 	hash := sha256.Sum256([]byte(password))
 	return hex.EncodeToString(hash[:])
+}
+
+func TestAPIServer(t *testing.T) {
+	Api_server().Run(":8080")
 }

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -41,7 +42,17 @@ func listener() *gosnmp.TrapListener {
 		}
 
 		time := time.Now().Format("2006-01-02 15:04:05")
-		_, err = stmt.Exec(addr.IP.String(), packet.MsgFlags.String(), time)
+		var event strings.Builder
+		for _, v := range packet.Variables {
+			switch v.Type {
+			case gosnmp.OctetString:
+				b := v.Value.([]byte)
+				event.WriteString(fmt.Sprintf("OID: %s, string: %x\n", v.Name, b))
+			default:
+				event.WriteString(fmt.Sprintf("trap: %+v\n", v))
+			}
+		}
+		_, err = stmt.Exec(time, addr.IP, event.String())
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -52,8 +63,8 @@ func listener() *gosnmp.TrapListener {
 }
 
 func main() {
-	// go func() {
-	Api_server().Run(":8080")
-	// }()
-	// listener().Listen("")
+	go func() {
+		Api_server().Run(":8080")
+	}()
+	listener().Listen("")
 }
