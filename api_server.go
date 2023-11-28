@@ -4,14 +4,21 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
-	"fmt"
 	"net/http"
 
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 )
 
-type InputField struct {
+type LoginField struct {
 	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
+type RegisterField struct {
+	Username string `json:"username" binding:"required"`
+	Email    string `json:"email" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
 
@@ -21,10 +28,18 @@ type TrapData struct {
 	Event string
 }
 
-func Api_server() {
+func Api_server() *gin.Engine {
 	r := gin.Default()
+	store := cookie.NewStore([]byte("secret"))
+	// 7 days
+	store.Options(sessions.Options{MaxAge: 60 * 60 * 24 * 7})
 	// TODO: set trusted proxies
 	r.SetTrustedProxies([]string{"127.0.0.1"})
+	r.Use(sessions.Sessions("login_session", store))
+
+	r.GET("/", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
 
 	// query data between start and end time
 	// example: http://localhost:8080/data?start=2020-01-01&end=2020-01-02
@@ -44,7 +59,13 @@ func Api_server() {
 	// login
 	// example: POST body: {"username":"admin","password":"admin"} http://localhost:8080/login
 	r.POST("/login", func(c *gin.Context) {
-		var loginRequest InputField
+		session := sessions.Default(c)
+		if session.Get("logged_in") == true {
+			c.JSON(http.StatusOK, gin.H{"status": "you are already logged in"})
+			return
+		}
+
+		var loginRequest LoginField
 
 		if err := c.ShouldBindJSON(&loginRequest); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -58,23 +79,26 @@ func Api_server() {
 			return
 		}
 		if status {
+			session.Set("logged_in", true)
+			session.Set("username", loginRequest.Username)
+			session.Save()
 			c.JSON(http.StatusOK, gin.H{"status": "you are logged in"})
 		} else {
-			c.JSON(http.StatusUnauthorized, gin.H{"status": "unauthorized"})
+			c.JSON(http.StatusUnauthorized, gin.H{"status": "username or password mismatch"})
 		}
 	})
 
 	// register
-	// example: POST body: {"username":"admin","password":"admin"} http://localhost:8080/register
+	// example: POST body: {"username":"admin","email":"email","password":"admin"} http://localhost:8080/register
 	r.POST("/register", func(c *gin.Context) {
-		var registerRequest InputField
+		var registerRequest RegisterField
 
 		if err := c.ShouldBindJSON(&registerRequest); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
-		err := register(registerRequest.Username, registerRequest.Password)
+		err := register(registerRequest.Username, registerRequest.Email, registerRequest.Password)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -83,9 +107,7 @@ func Api_server() {
 		c.JSON(http.StatusCreated, gin.H{"status": "registration successful"})
 	})
 
-	if err := r.Run(); err != nil {
-		fmt.Printf("Server failed to start: %v\n", err)
-	}
+	return r
 }
 
 func queryData(start string, end string) ([]TrapData, error) {
@@ -118,6 +140,16 @@ func queryData(start string, end string) ([]TrapData, error) {
 	return results, nil
 }
 
+// authenticate validates whether the provided username and password are valid.
+// It first opens a connection to the SQL data source, then hashes the provided password.
+//
+// Return values:
+//
+// (false, err) - Unexpected error (e.g. SQL connection error
+//
+// (false, nil) - Username or password does not match
+//
+// (true, nil) - Username and password match
 func authenticate(username string, password string) (bool, error) {
 	db, err := sql.Open("mysql", SQL_SOURCE)
 	if err != nil {
@@ -127,7 +159,7 @@ func authenticate(username string, password string) (bool, error) {
 
 	hashedPassword := hash(password)
 
-	stmt, err := db.Prepare("SELECT * FROM " + AUTH_TABLE + " WHERE username=? AND password=?")
+	stmt, err := db.Prepare("SELECT username, password FROM " + AUTH_TABLE + " WHERE username=? AND password=?")
 	if err != nil {
 		return false, err
 	}
@@ -149,7 +181,7 @@ func authenticate(username string, password string) (bool, error) {
 	return true, nil
 }
 
-func register(username string, password string) error {
+func register(username string, email string, password string) error {
 	db, err := sql.Open("mysql", SQL_SOURCE)
 	if err != nil {
 		return err
@@ -158,12 +190,12 @@ func register(username string, password string) error {
 
 	hashedPassword := hash(password)
 
-	stmt, err := db.Prepare("INSERT INTO " + AUTH_TABLE + "(username, password) VALUES(?, ?)")
+	stmt, err := db.Prepare("INSERT INTO " + AUTH_TABLE + "(username, email, password) VALUES(?, ?, ?)")
 	if err != nil {
 		return err
 	}
 
-	_, err = stmt.Exec(username, hashedPassword)
+	_, err = stmt.Exec(username, email, hashedPassword)
 	if err != nil {
 		return err
 	}
