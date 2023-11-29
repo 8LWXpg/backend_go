@@ -63,8 +63,8 @@ func listener() *gosnmp.TrapListener {
 }
 
 func main() {
-	go func() {
-		Api_server().Run(":8080")
-	}()
-	listener().Listen("")
+	// go func() {
+	Api_server().Run("localhost:8080")
+	// }()
+	// listener().Listen("")
 }

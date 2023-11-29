@@ -207,5 +207,5 @@ func hash(password string) string {
 }
 
 func TestAPIServer(t *testing.T) {
-	Api_server().Run(":8080")
+	Api_server().Run("localhost:8080")
 }
