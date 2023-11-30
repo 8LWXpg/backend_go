@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 )
 
@@ -31,12 +29,8 @@ type TrapData struct {
 
 func Api_server() *gin.Engine {
 	r := gin.Default()
-	store := cookie.NewStore([]byte("secret"))
-	// 7 days
-	store.Options(sessions.Options{MaxAge: 60 * 60 * 24 * 7})
 	// TODO: set trusted proxies
 	r.SetTrustedProxies([]string{"127.0.0.1"})
-	r.Use(sessions.Sessions("login_session", store))
 
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
@@ -60,11 +54,6 @@ func Api_server() *gin.Engine {
 	// login
 	// example: POST body: {"username":"admin","password":"admin"} http://localhost:8080/login
 	r.POST("/login", func(c *gin.Context) {
-		session := sessions.Default(c)
-		if session.Get("logged_in") == true {
-			c.JSON(http.StatusOK, gin.H{"status": "you are already logged in"})
-			return
-		}
 
 		var loginRequest LoginField
 
@@ -80,9 +69,6 @@ func Api_server() *gin.Engine {
 			return
 		}
 		if status {
-			session.Set("logged_in", true)
-			session.Set("username", loginRequest.Username)
-			session.Save()
 			c.JSON(http.StatusOK, gin.H{"status": "you are logged in"})
 		} else {
 			c.JSON(http.StatusUnauthorized, gin.H{"status": "username or password mismatch"})
