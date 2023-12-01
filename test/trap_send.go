@@ -28,8 +28,8 @@ func main() {
 
 	pdu := g.SnmpPDU{
 		Name:  ".1.3.6.1.6.3.1.1.4.1.0",
-		Type:  g.ObjectIdentifier,
-		Value: ".1.3.6.1.6.3.1.1.5.1",
+		Type:  g.OctetString,
+		Value: "hello✨",
 	}
 
 	trap := g.SnmpTrap{

@@ -36,20 +36,27 @@ func Listener() *gosnmp.TrapListener {
 			return
 		}
 
+		/* jsonBytes, err := json.Marshal(packet.Variables)
+		if err != nil {
+			fmt.Println("Error converting to JSON:", err)
+			return
+		}
+		fmt.Println(string(jsonBytes)) */
 		time := time.Now().Format("2006-01-02 15:04:05")
 		var event strings.Builder
 		for _, v := range packet.Variables {
 			switch v.Type {
 			case gosnmp.OctetString:
-				b := v.Value.([]byte)
-				fmt.Printf("OID: %s, string: %x\n", v.Name, b)
-				event.WriteString(fmt.Sprintf("OID: %s, string: %x\n", v.Name, b))
+				message := fmt.Sprintf("string: %s", string(v.Value.([]byte)))
+				fmt.Println(message)
+				event.WriteString(message)
 			default:
-				fmt.Printf("trap: %+v\n", v)
-				event.WriteString(fmt.Sprintf("trap: %+v\n", v))
+				message := fmt.Sprintf("type: %s, value: %v", v.Type, v.Value)
+				fmt.Println(message)
+				event.WriteString(message)
 			}
 		}
-		// fmt.Printf("event:\n%s\n", event.String())
+
 		_, err = stmt.Exec(time, addr.IP.String(), event.String())
 		if err != nil {
 			fmt.Println(err)
