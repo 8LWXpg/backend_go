@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net"
+	"net/smtp"
 	"strings"
 	"testing"
 	"time"
@@ -65,6 +66,19 @@ func Listener() *gosnmp.TrapListener {
 	}
 
 	return listener
+}
+
+func sendEmail(from string, to []string, subject string, body string) error {
+	smtpHost := "localhost" // replace with your SMTP server if different
+	smtpPort := "25"        // replace with your SMTP port if different
+	auth := smtp.PlainAuth("", "your-username", "your-password", smtpHost)
+
+	msg := "From: " + from + "\n" +
+		"To: " + to[0] + "\n" +
+		"Subject: " + subject + "\n\n" +
+		body
+
+	return smtp.SendMail(smtpHost+":"+smtpPort, auth, from, to, []byte(msg))
 }
 
 func TestListener(t *testing.T) {

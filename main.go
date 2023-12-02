@@ -10,5 +10,5 @@ func main() {
 	// go func() {
 	// Api_server().Run("localhost:8080")
 	// }()
-	Listener().Listen("localhost:162")
+	Listener().Listen("0.0.0.0:162")
 }
